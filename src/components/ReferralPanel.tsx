@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion, type Variants } from "motion/react";
 import { generateReferralMessage, type ReferralMessageContext } from "@/lib/referral";
 
@@ -33,17 +33,27 @@ const chunkVariants: Variants = {
 type ReferralPanelProps = ReferralMessageContext & {
   jobId: string;
   connectionId: string;
+  /** Starts drafting as soon as the panel scrolls into view, instead of
+   * waiting for the "Draft an intro" button — for the landing page, where
+   * the copy around it already promises the draft is there. */
+  autoGenerate?: boolean;
 };
 
 const buttonClass =
   "cursor-pointer whitespace-nowrap rounded-[2px] border border-signal bg-signal px-[13px] py-[7px] text-[12.5px] font-semibold text-surface transition-colors hover:bg-transparent hover:text-signal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
 
-export function ReferralPanel({ jobId, connectionId, ...context }: ReferralPanelProps) {
+export function ReferralPanel({
+  jobId,
+  connectionId,
+  autoGenerate = false,
+  ...context
+}: ReferralPanelProps) {
   const [state, setState] = useState<State>({ step: "idle" });
   const [copied, setCopied] = useState(false);
   const reduceMotion = useReducedMotion();
   const cancelRef = useRef<(() => void) | null>(null);
   const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     return () => {
@@ -60,6 +70,30 @@ export function ReferralPanel({ jobId, connectionId, ...context }: ReferralPanel
     });
   };
 
+  const generateRef = useRef(generate);
+  useEffect(() => {
+    generateRef.current = generate;
+  });
+
+  useEffect(() => {
+    if (!autoGenerate) return;
+    const el = containerRef.current;
+    if (!el) return;
+    let triggered = false;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !triggered) {
+          triggered = true;
+          generateRef.current();
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.4 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [autoGenerate]);
+
   const copy = () => {
     if (state.step !== "done") return;
     navigator.clipboard.writeText(state.message);
@@ -67,46 +101,54 @@ export function ReferralPanel({ jobId, connectionId, ...context }: ReferralPanel
     copiedTimeoutRef.current = setTimeout(() => setCopied(false), 1600);
   };
 
-  if (state.step === "generating") {
-    return (
-      <p className="flex items-center gap-2.5 text-sm text-muted">
-        <span
-          aria-hidden
-          className="stage-active-dot h-[9px] w-[9px] shrink-0 rounded-full border border-ink bg-paper"
-        />
-        Drafting your intro…
-      </p>
-    );
-  }
-
-  if (state.step === "done") {
-    const chunks = chunkMessage(state.message);
-
-    return (
-      <div className="rounded-[3px] border border-edge bg-surface px-5 py-4">
-        <motion.p
-          className="whitespace-pre-line text-sm leading-relaxed"
-          initial={reduceMotion ? "visible" : "hidden"}
-          animate="visible"
-          variants={messageContainer}
-        >
-          {chunks.map((chunk, i) => (
-            <motion.span key={i} variants={chunkVariants} className="inline-block">
-              {chunk}
-              {i < chunks.length - 1 ? " " : ""}
-            </motion.span>
-          ))}
-        </motion.p>
-        <button type="button" onClick={copy} className={`mt-4 ${buttonClass}`}>
-          {copied ? "Copied" : "Copy message"}
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <button type="button" onClick={generate} className={buttonClass}>
-      Draft an intro
-    </button>
+    <div ref={containerRef}>
+      {state.step === "generating" && (
+        <p className="flex items-center gap-2.5 text-sm text-muted">
+          <span
+            aria-hidden
+            className="stage-active-dot h-[9px] w-[9px] shrink-0 rounded-full border border-ink bg-paper"
+          />
+          Drafting your intro…
+        </p>
+      )}
+
+      {state.step === "done" &&
+        (() => {
+          const chunks = chunkMessage(state.message);
+          return (
+            <div className="rounded-[3px] border border-edge bg-surface px-5 py-4">
+              <motion.p
+                className="whitespace-pre-line text-sm leading-relaxed"
+                initial={reduceMotion ? "visible" : "hidden"}
+                animate="visible"
+                variants={messageContainer}
+              >
+                {chunks.map((chunk, i) => (
+                  <Fragment key={i}>
+                    <motion.span variants={chunkVariants} className="inline-block">
+                      {chunk}
+                    </motion.span>
+                    {/* A trailing space inside the inline-block above gets
+                        trimmed at the box edge by the browser and silently
+                        disappears — keeping it as its own text node between
+                        the spans is what actually renders a visible space. */}
+                    {i < chunks.length - 1 ? " " : ""}
+                  </Fragment>
+                ))}
+              </motion.p>
+              <button type="button" onClick={copy} className={`mt-4 ${buttonClass}`}>
+                {copied ? "Copied" : "Copy message"}
+              </button>
+            </div>
+          );
+        })()}
+
+      {state.step === "idle" && (
+        <button type="button" onClick={generate} className={buttonClass}>
+          Draft an intro
+        </button>
+      )}
+    </div>
   );
 }

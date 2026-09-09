@@ -21,9 +21,9 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Inroads",
+  title: "NOD — Find your way in",
   description:
-    "Find the roles that fit your CV, and the people you already know inside those companies.",
+    "NOD reads your CV, ranks the roles that fit, and finds the person inside the company who can put your name forward.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

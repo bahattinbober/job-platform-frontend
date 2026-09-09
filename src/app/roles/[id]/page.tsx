@@ -22,7 +22,7 @@ export default async function RoleDetailPage(props: PageProps<"/roles/[id]">) {
           href="/"
           className="font-display text-[17px] font-bold tracking-[-0.02em] [font-variation-settings:'wdth'_88]"
         >
-          Inroads
+          NOD
         </Link>
         <Link
           href="/matches"

@@ -13,10 +13,10 @@ export default function MatchesPage() {
           href="/"
           className="font-display text-[17px] font-bold tracking-[-0.02em] [font-variation-settings:'wdth'_88]"
         >
-          Inroads
+          NOD
         </Link>
         <p className="font-mono text-[11.5px] text-muted">
-          bahattin · 312 connections imported
+          312 connections imported
         </p>
       </header>
 
