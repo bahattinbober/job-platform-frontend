@@ -1,9 +1,34 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { motion, useReducedMotion, type Variants } from "motion/react";
 import { generateReferralMessage, type ReferralMessageContext } from "@/lib/referral";
 
 type State = { step: "idle" } | { step: "generating" } | { step: "done"; message: string };
+
+const WORDS_PER_GROUP = 6;
+
+function chunkMessage(message: string): string[] {
+  const words = message.split(/\s+/);
+  const chunks: string[] = [];
+  for (let i = 0; i < words.length; i += WORDS_PER_GROUP) {
+    chunks.push(words.slice(i, i + WORDS_PER_GROUP).join(" "));
+  }
+  return chunks;
+}
+
+// Reads as the draft landing on the page rather than snapping into view,
+// without the tedium of a per-character typewriter. Tuned to land in
+// 400–600ms total for a typical message length.
+const messageContainer: Variants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.07 } },
+};
+
+const chunkVariants: Variants = {
+  hidden: { opacity: 0, y: 4 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.25, ease: "easeOut" } },
+};
 
 type ReferralPanelProps = ReferralMessageContext & {
   jobId: string;
@@ -16,6 +41,7 @@ const buttonClass =
 export function ReferralPanel({ jobId, connectionId, ...context }: ReferralPanelProps) {
   const [state, setState] = useState<State>({ step: "idle" });
   const [copied, setCopied] = useState(false);
+  const reduceMotion = useReducedMotion();
   const cancelRef = useRef<(() => void) | null>(null);
   const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -54,9 +80,23 @@ export function ReferralPanel({ jobId, connectionId, ...context }: ReferralPanel
   }
 
   if (state.step === "done") {
+    const chunks = chunkMessage(state.message);
+
     return (
       <div className="rounded-[3px] border border-edge bg-surface px-5 py-4">
-        <p className="whitespace-pre-line text-sm leading-relaxed">{state.message}</p>
+        <motion.p
+          className="whitespace-pre-line text-sm leading-relaxed"
+          initial={reduceMotion ? "visible" : "hidden"}
+          animate="visible"
+          variants={messageContainer}
+        >
+          {chunks.map((chunk, i) => (
+            <motion.span key={i} variants={chunkVariants} className="inline-block">
+              {chunk}
+              {i < chunks.length - 1 ? " " : ""}
+            </motion.span>
+          ))}
+        </motion.p>
         <button type="button" onClick={copy} className={`mt-4 ${buttonClass}`}>
           {copied ? "Copied" : "Copy message"}
         </button>

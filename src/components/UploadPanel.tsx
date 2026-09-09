@@ -156,7 +156,7 @@ export function UploadPanel() {
         </div>
 
         <Link
-          href="/"
+          href="/matches"
           className="mt-6 inline-block rounded-[2px] border border-signal bg-signal px-4 py-2 text-[13px] font-semibold text-surface transition-colors hover:bg-transparent hover:text-signal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
         >
           See your matches

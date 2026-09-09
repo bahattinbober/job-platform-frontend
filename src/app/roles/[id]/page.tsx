@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ViewTransition } from "react";
 import { notFound } from "next/navigation";
 import { Meter } from "@/components/Meter";
 import { ReferralPanel } from "@/components/ReferralPanel";
@@ -17,11 +18,14 @@ export default async function RoleDetailPage(props: PageProps<"/roles/[id]">) {
   return (
     <main className="mx-auto w-full max-w-[760px] px-6 pb-24">
       <header className="flex items-baseline justify-between gap-4 border-b border-edge py-7">
-        <p className="font-display text-[17px] font-bold tracking-[-0.02em] [font-variation-settings:'wdth'_88]">
-          Inroads
-        </p>
         <Link
           href="/"
+          className="font-display text-[17px] font-bold tracking-[-0.02em] [font-variation-settings:'wdth'_88]"
+        >
+          Inroads
+        </Link>
+        <Link
+          href="/matches"
           className="text-[12.5px] text-muted transition-colors hover:text-ink"
         >
           Back to matches
@@ -32,7 +36,7 @@ export default async function RoleDetailPage(props: PageProps<"/roles/[id]">) {
         <section className="flex items-start justify-between gap-5 py-6 max-[560px]:flex-col max-[560px]:items-start">
           <div>
             <h1 className="mb-1 font-display text-[27px] font-semibold tracking-[-0.026em] [font-variation-settings:'wdth'_86,'opsz'_40]">
-              {job.title}
+              <ViewTransition name={`role-title-${job.id}`}>{job.title}</ViewTransition>
             </h1>
             <p className="text-[14px] text-muted">
               {meta.map((part, i) => (
@@ -110,7 +114,7 @@ export default async function RoleDetailPage(props: PageProps<"/roles/[id]">) {
 
       <div className="pt-6">
         <Link
-          href="/"
+          href="/matches"
           className="text-sm font-semibold text-ink underline decoration-edge underline-offset-4 transition-colors hover:decoration-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
         >
           Back to matches

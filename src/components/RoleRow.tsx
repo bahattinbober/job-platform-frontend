@@ -1,18 +1,47 @@
+"use client";
+
 import type { ReactElement } from "react";
+import { ViewTransition } from "react";
 import Link from "next/link";
+import { motion, type Variants } from "motion/react";
 import type { RoleMatch } from "@/lib/types";
 import { formatSince } from "@/lib/format";
 import { Meter } from "./Meter";
+
+const rowVariants: Variants = {
+  hidden: { opacity: 0, y: 6 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } },
+};
+
+// A connection is a small event — it gets a quick overshoot so the node
+// reads as "this one lit up," not just "this one faded in."
+const nodeVariantsConnected: Variants = {
+  hidden: { opacity: 0, scale: 0.4 },
+  visible: {
+    opacity: 1,
+    scale: [0.4, 1.35, 1],
+    transition: { duration: 0.45, ease: "easeOut" },
+  },
+};
+
+const nodeVariantsPlain: Variants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { duration: 0.3, ease: "easeOut" } },
+};
 
 export function RoleRow({ role }: { role: RoleMatch }): ReactElement {
   const path = role.connection;
   const meta = [role.company, role.location, role.remoteType].filter(Boolean);
 
   return (
-    <article className="relative border-b border-edge py-[18px] last:border-b-0">
+    <motion.article
+      variants={rowVariants}
+      className="relative border-b border-edge py-[18px] last:border-b-0"
+    >
       {/* Node on the rail. Filled means there is a way in. */}
-      <span
+      <motion.span
         aria-hidden
+        variants={path ? nodeVariantsConnected : nodeVariantsPlain}
         className={`absolute left-[-33px] top-[25px] h-[9px] w-[9px] rounded-full border ${
           path
             ? "border-signal bg-signal shadow-[0_0_0_4px_var(--paper),0_0_0_5px_rgb(31_92_76/0.22)]"
@@ -35,7 +64,7 @@ export function RoleRow({ role }: { role: RoleMatch }): ReactElement {
               href={`/roles/${role.id}`}
               className="before:absolute before:inset-0 before:content-[''] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
             >
-              {role.title}
+              <ViewTransition name={`role-title-${role.id}`}>{role.title}</ViewTransition>
             </Link>
           </h2>
           <p className="text-[13.5px] text-muted">
@@ -69,6 +98,6 @@ export function RoleRow({ role }: { role: RoleMatch }): ReactElement {
           No one from your network works here.
         </p>
       )}
-    </article>
+    </motion.article>
   );
 }
