@@ -1,3 +1,5 @@
+import { ApiError, getReferralMessage } from "./api";
+
 export type ReferralMessageHandlers = {
   onComplete: (message: string) => void;
   onError: (message: string) => void;
@@ -28,6 +30,34 @@ export function generateReferralMessage(
   }, 1500);
 
   return () => clearTimeout(timeout);
+}
+
+/**
+ * The real thing: GET /jobs/:id/referral-message/:connectionId. The mock
+ * above stays in place for the landing page's illustrative referral
+ * moment — this is what /roles/[id] passes to ReferralPanel instead.
+ */
+export function generateReferralMessageLive(
+  jobId: string,
+  connectionId: string,
+  _context: ReferralMessageContext,
+  handlers: ReferralMessageHandlers
+): () => void {
+  let cancelled = false;
+
+  getReferralMessage(jobId, connectionId)
+    .then((message) => {
+      if (!cancelled) handlers.onComplete(message);
+    })
+    .catch((err) => {
+      if (!cancelled) {
+        handlers.onError(err instanceof ApiError ? err.message : "Couldn't generate a message.");
+      }
+    });
+
+  return () => {
+    cancelled = true;
+  };
 }
 
 function joinWithAnd(items: string[]): string {

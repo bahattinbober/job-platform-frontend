@@ -4,16 +4,28 @@ import { notFound } from "next/navigation";
 import { Meter } from "@/components/Meter";
 import { ReferralPanel } from "@/components/ReferralPanel";
 import { formatSince } from "@/lib/format";
-import { jobDetails, resumeSkills } from "@/lib/mock";
+import { ApiError, flattenParsedSkills, getActiveResume, getJobDetail, getMatchingJobs } from "@/lib/api";
 
 export default async function RoleDetailPage(props: PageProps<"/roles/[id]">) {
   const { id } = await props.params;
-  const job = jobDetails.find((j) => j.id === id);
 
-  if (!job) notFound();
+  const resume = await getActiveResume();
+  const matches = resume ? await getMatchingJobs(resume.id) : [];
+  const score = matches.find((m) => m.id === id)?.score ?? 0;
+  const resumeSkills = flattenParsedSkills(resume?.parsedSkills ?? null).map((s) =>
+    s.toLowerCase()
+  );
+
+  let job;
+  try {
+    job = await getJobDetail(id, score);
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) notFound();
+    throw err;
+  }
 
   const meta = [job.company, job.location, job.remoteType].filter(Boolean);
-  const matchedSkills = job.skills.filter((skill) => resumeSkills.includes(skill));
+  const matchedSkills = job.skills.filter((skill) => resumeSkills.includes(skill.toLowerCase()));
 
   return (
     <main className="mx-auto w-full max-w-[760px] px-6 pb-24">
@@ -52,26 +64,32 @@ export default async function RoleDetailPage(props: PageProps<"/roles/[id]">) {
 
         <section className="py-6">
           <h2 className="mb-4 text-sm font-semibold">Why it matched</h2>
-          <ul className="flex flex-wrap gap-1.5">
-            {job.skills.map((skill) => {
-              const matched = resumeSkills.includes(skill);
-              return (
-                <li
-                  key={skill}
-                  className={
-                    matched
-                      ? "rounded-[2px] bg-ink px-2 py-1 text-[12.5px] text-surface"
-                      : "rounded-[2px] border border-edge px-2 py-1 text-[12.5px] text-muted"
-                  }
-                >
-                  {skill}
-                </li>
-              );
-            })}
-          </ul>
-          <p className="mt-4 font-mono text-[11.5px] text-muted">
-            {matchedSkills.length} of {job.skills.length} skills on your CV
-          </p>
+          {job.skills.length === 0 ? (
+            <p className="text-[13px] text-muted">This posting doesn&apos;t list required skills.</p>
+          ) : (
+            <>
+              <ul className="flex flex-wrap gap-1.5">
+                {job.skills.map((skill) => {
+                  const matched = resumeSkills.includes(skill.toLowerCase());
+                  return (
+                    <li
+                      key={skill}
+                      className={
+                        matched
+                          ? "rounded-[2px] bg-ink px-2 py-1 text-[12.5px] text-surface"
+                          : "rounded-[2px] border border-edge px-2 py-1 text-[12.5px] text-muted"
+                      }
+                    >
+                      {skill}
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="mt-4 font-mono text-[11.5px] text-muted">
+                {matchedSkills.length} of {job.skills.length} skills on your CV
+              </p>
+            </>
+          )}
         </section>
 
         <section className="py-6">
@@ -99,6 +117,7 @@ export default async function RoleDetailPage(props: PageProps<"/roles/[id]">) {
           <section className="py-6">
             <h2 className="mb-4 text-sm font-semibold">Referral message</h2>
             <ReferralPanel
+              source="live"
               jobId={job.id}
               connectionId={job.connection.id}
               jobTitle={job.title}

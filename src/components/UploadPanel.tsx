@@ -23,6 +23,8 @@ const ACCEPTED_MIME_TYPES = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ];
 
+const MAX_FILE_BYTES = 5 * 1024 * 1024;
+
 function isAcceptedFile(file: File): boolean {
   if (ACCEPTED_MIME_TYPES.includes(file.type)) return true;
   return /\.(pdf|docx)$/i.test(file.name);
@@ -71,7 +73,7 @@ function StageList({ current }: { current: number }) {
 export function UploadPanel() {
   const [screen, setScreen] = useState<Screen>({ step: "idle" });
   const [isDragging, setIsDragging] = useState(false);
-  const [rejected, setRejected] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const cancelRef = useRef<(() => void) | null>(null);
 
@@ -79,10 +81,14 @@ export function UploadPanel() {
 
   const startProcessing = useCallback((file: File) => {
     if (!isAcceptedFile(file)) {
-      setRejected(true);
+      setErrorMessage("Only PDF and DOCX files are accepted.");
       return;
     }
-    setRejected(false);
+    if (file.size > MAX_FILE_BYTES) {
+      setErrorMessage("File is larger than the 5 MB limit.");
+      return;
+    }
+    setErrorMessage(null);
     cancelRef.current?.();
     setScreen({ step: "processing", fileName: file.name, fileSize: file.size, stageIndex: 0 });
 
@@ -93,9 +99,9 @@ export function UploadPanel() {
       onComplete: (result) => {
         setScreen({ step: "done", result });
       },
-      onError: () => {
+      onError: (message) => {
         setScreen({ step: "idle" });
-        setRejected(true);
+        setErrorMessage(message);
       },
     });
   }, []);
@@ -188,9 +194,7 @@ export function UploadPanel() {
         <p className="text-sm">Drop your CV here, or click to choose a PDF or DOCX file.</p>
       </div>
 
-      {rejected && (
-        <p className="mt-3 text-[13px] text-muted">Only PDF and DOCX files are accepted.</p>
-      )}
+      {errorMessage && <p className="mt-3 text-[13px] text-muted">{errorMessage}</p>}
 
       <div className="mt-6">
         <StageList current={-1} />

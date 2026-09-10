@@ -1,7 +1,10 @@
-import type { ResumeParseResult, SkillCategory } from "./types";
+import type { ResumeParseResult } from "./types";
+import { ApiError, getActiveResume, parsedSkillsToCategories, uploadResume } from "./api";
 
-// Three real backend stages: pdf-parse text extraction, OpenRouter skill
-// extraction, then the BullMQ embedding queue.
+// pdf-parse text extraction happens synchronously inside the upload request;
+// skill extraction (OpenRouter) and embedding generation happen afterward on
+// a BullMQ queue and land together in one DB write, so they're not
+// separately observable — we poll until parsedSkills appears.
 export const PROCESSING_STAGES = [
   { key: "extract", label: "Text extracted" },
   { key: "parse", label: "Skills parsed" },
@@ -14,48 +17,59 @@ export type ProcessingHandlers = {
   onError: (message: string) => void;
 };
 
-/**
- * Simulated with timers until the backend endpoint exists. Swap the body
- * for a fetch/SSE subscription to the real pipeline — the onStage /
- * onComplete contract is what the UI depends on, not how it's driven.
- */
-export function runResumeProcessing(
-  file: File,
-  handlers: ProcessingHandlers
-): () => void {
-  const timeouts: ReturnType<typeof setTimeout>[] = [];
-  const schedule = (fn: () => void, delay: number) => {
-    timeouts.push(setTimeout(fn, delay));
+const POLL_INTERVAL_MS = 1500;
+const POLL_TIMEOUT_MS = 45_000;
+
+export function runResumeProcessing(file: File, handlers: ProcessingHandlers): () => void {
+  let cancelled = false;
+  let pollTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const finish = (resume: { id: string; parsedSkills: Parameters<typeof parsedSkillsToCategories>[0] }) => {
+    handlers.onStage(2);
+    handlers.onComplete(parsedSkillsToCategories(resume.parsedSkills));
   };
 
-  handlers.onStage(0);
-  schedule(() => handlers.onStage(1), 1100);
-  schedule(() => handlers.onStage(2), 2200);
-  schedule(() => handlers.onComplete(mockResult(file)), 3300);
+  const poll = async (resumeId: string, startedAt: number) => {
+    if (cancelled) return;
+    if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
+      finish({ id: resumeId, parsedSkills: null });
+      return;
+    }
+    try {
+      const latest = await getActiveResume();
+      if (latest?.id === resumeId && latest.parsedSkills) {
+        finish(latest);
+        return;
+      }
+    } catch {
+      // transient poll failure — keep retrying until the timeout above
+    }
+    if (!cancelled) pollTimer = setTimeout(() => poll(resumeId, startedAt), POLL_INTERVAL_MS);
+  };
 
-  return () => timeouts.forEach(clearTimeout);
-}
+  (async () => {
+    handlers.onStage(0);
+    let resume;
+    try {
+      resume = await uploadResume(file);
+    } catch (err) {
+      if (!cancelled) {
+        handlers.onError(err instanceof ApiError ? err.message : "Upload failed.");
+      }
+      return;
+    }
+    if (cancelled) return;
 
-// Shared with mock.ts, so the skills shown here and the ones matched against
-// job listings come from the same fictional resume.
-export const MOCK_PARSED_SKILLS: SkillCategory[] = [
-  {
-    key: "programming_languages",
-    label: "Programming languages",
-    skills: ["TypeScript", "Python", "Go"],
-  },
-  {
-    key: "backend",
-    label: "Backend",
-    skills: ["Node.js", "PostgreSQL", "Redis", "BullMQ"],
-  },
-  {
-    key: "frontend",
-    label: "Frontend",
-    skills: ["React", "Next.js", "Tailwind CSS"],
-  },
-];
+    handlers.onStage(1);
+    if (resume.parsedSkills) {
+      finish(resume);
+    } else {
+      pollTimer = setTimeout(() => poll(resume.id, Date.now()), POLL_INTERVAL_MS);
+    }
+  })();
 
-function mockResult(_file: File): ResumeParseResult {
-  return { categories: MOCK_PARSED_SKILLS };
+  return () => {
+    cancelled = true;
+    if (pollTimer) clearTimeout(pollTimer);
+  };
 }

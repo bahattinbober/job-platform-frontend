@@ -2,7 +2,11 @@
 
 import { Fragment, useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion, type Variants } from "motion/react";
-import { generateReferralMessage, type ReferralMessageContext } from "@/lib/referral";
+import {
+  generateReferralMessage,
+  generateReferralMessageLive,
+  type ReferralMessageContext,
+} from "@/lib/referral";
 
 type State = { step: "idle" } | { step: "generating" } | { step: "done"; message: string };
 
@@ -36,6 +40,14 @@ type ReferralPanelProps = ReferralMessageContext & {
    * waiting for the "Draft an intro" button — for the landing page, where
    * the copy around it already promises the draft is there. */
   autoGenerate?: boolean;
+  /**
+   * "mock" (default) is the illustrative generator the landing page uses.
+   * "live" calls the real endpoint. A function can't be passed as a prop
+   * from a Server Component to this Client Component — functions aren't
+   * serializable across that boundary — so callers pass this discriminator
+   * instead and the generator is picked here.
+   */
+  source?: "mock" | "live";
 };
 
 const buttonClass =
@@ -45,10 +57,13 @@ export function ReferralPanel({
   jobId,
   connectionId,
   autoGenerate = false,
+  source = "mock",
   ...context
 }: ReferralPanelProps) {
+  const generator = source === "live" ? generateReferralMessageLive : generateReferralMessage;
   const [state, setState] = useState<State>({ step: "idle" });
   const [copied, setCopied] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const reduceMotion = useReducedMotion();
   const cancelRef = useRef<(() => void) | null>(null);
   const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -62,10 +77,14 @@ export function ReferralPanel({
   }, []);
 
   const generate = () => {
+    setErrorMessage(null);
     setState({ step: "generating" });
-    cancelRef.current = generateReferralMessage(jobId, connectionId, context, {
+    cancelRef.current = generator(jobId, connectionId, context, {
       onComplete: (message) => setState({ step: "done", message }),
-      onError: () => setState({ step: "idle" }),
+      onError: (message) => {
+        setState({ step: "idle" });
+        setErrorMessage(message);
+      },
     });
   };
 
@@ -144,9 +163,12 @@ export function ReferralPanel({
         })()}
 
       {state.step === "idle" && (
-        <button type="button" onClick={generate} className={buttonClass}>
-          Draft an intro
-        </button>
+        <>
+          <button type="button" onClick={generate} className={buttonClass}>
+            Draft an intro
+          </button>
+          {errorMessage && <p className="mt-3 text-[13px] text-muted">{errorMessage}</p>}
+        </>
       )}
     </div>
   );

@@ -1,5 +1,24 @@
-import type { JobDetail, RoleMatch } from "./types";
-import { MOCK_PARSED_SKILLS } from "./resumeProcessing";
+import type { JobDetail, RoleMatch, SkillCategory } from "./types";
+
+// Used only by the landing page's illustrative "product moments" — the real
+// upload/matches/role screens get this from the live API (see lib/api.ts).
+const MOCK_PARSED_SKILLS: SkillCategory[] = [
+  {
+    key: "programming_languages",
+    label: "Programming languages",
+    skills: ["TypeScript", "Python", "Go"],
+  },
+  {
+    key: "backend",
+    label: "Backend",
+    skills: ["Node.js", "PostgreSQL", "Redis", "BullMQ"],
+  },
+  {
+    key: "frontend",
+    label: "Frontend",
+    skills: ["React", "Next.js", "Tailwind CSS"],
+  },
+];
 
 /** Stand-in for Resume.parsedSkills until a resume is actually uploaded. */
 export const resumeSkills: string[] = MOCK_PARSED_SKILLS.flatMap((c) => c.skills);
