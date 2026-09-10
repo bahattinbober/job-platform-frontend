@@ -1,36 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Job Platform Frontend
 
-## Getting Started
+The frontend for NOD. A user uploads a CV, the backend ranks matching job postings by semantic similarity, surfaces which of the user's LinkedIn connections work at those companies, and drafts a referral message to send them.
 
-First, run the development server:
+Built with Next.js 16 (App Router) and TypeScript, styled with Tailwind CSS v4. The landing page's network visualization runs on Three.js (three-forcegraph) with GSAP ScrollTrigger driving the scroll-based staging; Motion handles the smaller in-page animations elsewhere.
+
+## Screens
+
+- `/` — scroll-driven marketing landing page
+- `/login`, `/register` — authentication
+- `/upload` — CV upload
+- `/matches` — ranked job matches
+- `/roles/[id]` — role detail, network lookup, referral message
+
+## Running locally
+
+The backend must already be running — see [job-platform-backend](https://github.com/bahattinbober/job-platform-backend).
+
+```bash
+npm install
+```
+
+Create `.env.local`:
+
+```
+NEXT_PUBLIC_API_URL=http://localhost:3001
+```
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The app runs at http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Current state
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Authentication stores the JWT in `localStorage`, not an httpOnly cookie. The backend returns the token in a JSON response body and sets no cookies; moving to cookie-based sessions is out of scope for now.
+- The landing page's product illustrations (upload, matches, network, referral) render from mock data in `src/lib/mock.ts`. The actual product screens — `/upload`, `/matches`, `/roles/[id]` — call the live API.
