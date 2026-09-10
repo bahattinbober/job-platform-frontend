@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Public_Sans, JetBrains_Mono } from "next/font/google";
+import { AuthProvider } from "@/lib/auth/AuthProvider";
 import "./globals.css";
 
 // Display face. Variable width axis lets headlines run narrow without a second file.
@@ -32,7 +33,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${display.variable} ${body.variable} ${mono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

@@ -1,4 +1,5 @@
 import type { Connection, JobDetail, ResumeParseResult, RoleMatch, SkillCategory } from "./types";
+import { clearToken, getToken } from "./session";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -12,20 +13,38 @@ export class ApiError extends Error {
   }
 }
 
-/**
- * Authentication is out of scope for this pass — every request authenticates
- * as whoever NEXT_PUBLIC_DEV_TOKEN belongs to. This is the one place that
- * knows that; swap it for a real session lookup later and nothing else
- * in this file needs to change.
- */
+/** Attaches the stored session token, if any. No token just means no header. */
 function authHeader(): HeadersInit {
-  const token = process.env.NEXT_PUBLIC_DEV_TOKEN;
-  if (!token) {
-    throw new ApiError(
-      "NEXT_PUBLIC_DEV_TOKEN is not set. Add it to .env.local and restart the dev server."
-    );
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+/**
+ * A 401 on a request that carried a token means the session is dead (expired
+ * or revoked) — clear it and bounce to /login so the user isn't left staring
+ * at a broken screen. A 401 with no token attached is a normal login-form
+ * rejection (wrong password) and is left for the caller to show inline, so
+ * this only fires for requests that thought they were authenticated.
+ */
+async function handleResponse<T>(res: Response, hadAuthHeader: boolean): Promise<T> {
+  if (res.status === 401 && hadAuthHeader) {
+    clearToken();
+    // This is a plain module, not a component — there's no router instance
+    // to inject here, and this can fire from any call site in the app. A
+    // full navigation is the one redirect mechanism available outside React.
+    if (typeof window !== "undefined") window.location.href = "/login";
+    throw new ApiError("Your session expired. Redirecting to sign in…", 401);
   }
-  return { Authorization: `Bearer ${token}` };
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    const message =
+      (body && typeof body.message === "string" && body.message) ||
+      `Request failed with ${res.status}`;
+    throw new ApiError(message, res.status);
+  }
+
+  return res.json() as Promise<T>;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -38,15 +57,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiError(`Can't reach the backend at ${API_URL}. Is it running?`);
   }
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => null);
-    const message =
-      (body && typeof body.message === "string" && body.message) ||
-      `Request to ${path} failed with ${res.status}`;
-    throw new ApiError(message, res.status);
-  }
-
-  return res.json() as Promise<T>;
+  return handleResponse<T>(res, "Authorization" in headers);
 }
 
 // ---- Backend response shapes (private — components never see these) ----
@@ -175,15 +186,7 @@ export async function uploadResume(file: File): Promise<Resume> {
     throw new ApiError(`Can't reach the backend at ${API_URL}. Is it running?`);
   }
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => null);
-    const message =
-      (body && typeof body.message === "string" && body.message) ||
-      `Upload failed with ${res.status}`;
-    throw new ApiError(message, res.status);
-  }
-
-  return res.json() as Promise<Resume>;
+  return handleResponse<Resume>(res, "Authorization" in headers);
 }
 
 export async function listConnections(): Promise<Connection[]> {
@@ -261,6 +264,33 @@ export async function getReferralMessage(jobId: string, connectionId: string): P
  * and network across two endpoints. This assembles the same RoleMatch shape
  * the UI already expects, fetching both per job.
  */
+// ---- Auth ----
+
+export type AuthUser = { email: string };
+
+export async function registerAccount(email: string, password: string): Promise<void> {
+  await request<{ id: string; email: string }>("/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export async function login(email: string, password: string): Promise<string> {
+  const { accessToken } = await request<{ accessToken: string }>("/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  return accessToken;
+}
+
+/** GET /auth/me returns whatever the JWT strategy attaches — { userId, email }. */
+export async function getMe(): Promise<AuthUser> {
+  const me = await request<{ email: string }>("/auth/me");
+  return { email: me.email };
+}
+
 export async function getRoleMatches(resumeId: string): Promise<RoleMatch[]> {
   const matches = await getMatchingJobs(resumeId);
   return Promise.all(

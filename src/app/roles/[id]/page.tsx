@@ -1,48 +1,107 @@
+"use client";
+
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { ViewTransition } from "react";
-import { notFound } from "next/navigation";
+import { AppHeader } from "@/components/AppHeader";
+import { RequireAuth } from "@/components/auth/RequireAuth";
 import { Meter } from "@/components/Meter";
 import { ReferralPanel } from "@/components/ReferralPanel";
 import { formatSince } from "@/lib/format";
-import { ApiError, flattenParsedSkills, getActiveResume, getJobDetail, getMatchingJobs } from "@/lib/api";
+import {
+  ApiError,
+  flattenParsedSkills,
+  getActiveResume,
+  getJobDetail,
+  getMatchingJobs,
+} from "@/lib/api";
+import type { JobDetail } from "@/lib/types";
 
-export default async function RoleDetailPage(props: PageProps<"/roles/[id]">) {
-  const { id } = await props.params;
+type Screen =
+  | { step: "loading" }
+  | { step: "not-found" }
+  | { step: "error"; message: string }
+  | { step: "ready"; job: JobDetail; resumeSkills: string[] };
 
-  const resume = await getActiveResume();
-  const matches = resume ? await getMatchingJobs(resume.id) : [];
-  const score = matches.find((m) => m.id === id)?.score ?? 0;
-  const resumeSkills = flattenParsedSkills(resume?.parsedSkills ?? null).map((s) =>
-    s.toLowerCase()
-  );
+function RoleDetailBody({ id }: { id: string }) {
+  const [screen, setScreen] = useState<Screen>({ step: "loading" });
 
-  let job;
-  try {
-    job = await getJobDetail(id, score);
-  } catch (err) {
-    if (err instanceof ApiError && err.status === 404) notFound();
-    throw err;
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setScreen({ step: "loading" });
+      try {
+        const resume = await getActiveResume();
+        const matches = resume ? await getMatchingJobs(resume.id) : [];
+        const score = matches.find((m) => m.id === id)?.score ?? 0;
+        const resumeSkills = flattenParsedSkills(resume?.parsedSkills ?? null).map((s) =>
+          s.toLowerCase()
+        );
+        const job = await getJobDetail(id, score);
+        if (!cancelled) setScreen({ step: "ready", job, resumeSkills });
+      } catch (err) {
+        if (cancelled) return;
+        if (err instanceof ApiError && err.status === 404) {
+          setScreen({ step: "not-found" });
+        } else {
+          setScreen({
+            step: "error",
+            message: err instanceof ApiError ? err.message : "Something went wrong.",
+          });
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  if (screen.step === "loading") {
+    return (
+      <main className="mx-auto w-full max-w-[760px] px-6 pb-24">
+        <AppHeader right={<BackLink />} />
+        <p className="pt-14 text-sm text-muted">Loading this role…</p>
+      </main>
+    );
   }
 
+  if (screen.step === "not-found") {
+    return (
+      <main className="mx-auto w-full max-w-[760px] px-6 pb-24">
+        <AppHeader right={<BackLink />} />
+        <div className="pt-14">
+          <h1 className="mb-2 font-display text-[26px] font-semibold tracking-[-0.02em]">
+            This role doesn&apos;t exist
+          </h1>
+          <p className="max-w-[46ch] text-sm text-muted">
+            It may have been removed. Head back to your matches.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  if (screen.step === "error") {
+    return (
+      <main className="mx-auto w-full max-w-[760px] px-6 pb-24">
+        <AppHeader right={<BackLink />} />
+        <div className="pt-14">
+          <h1 className="mb-2 font-display text-[26px] font-semibold tracking-[-0.02em]">
+            Couldn&apos;t load this role
+          </h1>
+          <p className="max-w-[46ch] text-sm text-muted">{screen.message}</p>
+        </div>
+      </main>
+    );
+  }
+
+  const { job, resumeSkills } = screen;
   const meta = [job.company, job.location, job.remoteType].filter(Boolean);
   const matchedSkills = job.skills.filter((skill) => resumeSkills.includes(skill.toLowerCase()));
 
   return (
     <main className="mx-auto w-full max-w-[760px] px-6 pb-24">
-      <header className="flex items-baseline justify-between gap-4 border-b border-edge py-7">
-        <Link
-          href="/"
-          className="font-display text-[17px] font-bold tracking-[-0.02em] [font-variation-settings:'wdth'_88]"
-        >
-          NOD
-        </Link>
-        <Link
-          href="/matches"
-          className="text-[12.5px] text-muted transition-colors hover:text-ink"
-        >
-          Back to matches
-        </Link>
-      </header>
+      <AppHeader right={<BackLink />} />
 
       <div className="divide-y divide-edge">
         <section className="flex items-start justify-between gap-5 py-6 max-[560px]:flex-col max-[560px]:items-start">
@@ -140,5 +199,22 @@ export default async function RoleDetailPage(props: PageProps<"/roles/[id]">) {
         </Link>
       </div>
     </main>
+  );
+}
+
+function BackLink() {
+  return (
+    <Link href="/matches" className="text-[12.5px] text-muted transition-colors hover:text-ink">
+      Back to matches
+    </Link>
+  );
+}
+
+export default function RoleDetailPage(props: PageProps<"/roles/[id]">) {
+  const { id } = use(props.params);
+  return (
+    <RequireAuth>
+      <RoleDetailBody id={id} />
+    </RequireAuth>
   );
 }
