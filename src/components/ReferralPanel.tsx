@@ -6,28 +6,27 @@ import { generateReferralMessage, type ReferralMessageContext } from "@/lib/refe
 
 type State = { step: "idle" } | { step: "generating" } | { step: "done"; message: string };
 
-const WORDS_PER_GROUP = 6;
-
-function chunkMessage(message: string): string[] {
-  const words = message.split(/\s+/);
-  const chunks: string[] = [];
-  for (let i = 0; i < words.length; i += WORDS_PER_GROUP) {
-    chunks.push(words.slice(i, i + WORDS_PER_GROUP).join(" "));
-  }
-  return chunks;
+function splitWords(message: string): string[] {
+  return message.split(/\s+/);
 }
 
 // Reads as the draft landing on the page rather than snapping into view,
 // without the tedium of a per-character typewriter. Tuned to land in
-// 400–600ms total for a typical message length.
+// 900ms–1.1s total for a typical message length. Staggering per word (rather
+// than in multi-word groups) matters beyond timing: a group wrapped in its
+// own inline-block is an atomic box the browser won't split across lines,
+// so it jumps to the next line as a unit even with room left on the current
+// one — reading as short, ragged lines that stop well short of the edge.
+// Single words are already the smallest unit text wraps on, so this can't
+// happen at the word level.
 const messageContainer: Variants = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.07 } },
+  visible: { transition: { staggerChildren: 0.012 } },
 };
 
-const chunkVariants: Variants = {
+const wordVariants: Variants = {
   hidden: { opacity: 0, y: 4 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.25, ease: "easeOut" } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.22, ease: "easeOut" } },
 };
 
 type ReferralPanelProps = ReferralMessageContext & {
@@ -115,7 +114,7 @@ export function ReferralPanel({
 
       {state.step === "done" &&
         (() => {
-          const chunks = chunkMessage(state.message);
+          const words = splitWords(state.message);
           return (
             <div className="rounded-[3px] border border-edge bg-surface px-5 py-4">
               <motion.p
@@ -124,16 +123,16 @@ export function ReferralPanel({
                 animate="visible"
                 variants={messageContainer}
               >
-                {chunks.map((chunk, i) => (
+                {words.map((word, i) => (
                   <Fragment key={i}>
-                    <motion.span variants={chunkVariants} className="inline-block">
-                      {chunk}
+                    <motion.span variants={wordVariants} className="inline-block">
+                      {word}
                     </motion.span>
                     {/* A trailing space inside the inline-block above gets
                         trimmed at the box edge by the browser and silently
                         disappears — keeping it as its own text node between
                         the spans is what actually renders a visible space. */}
-                    {i < chunks.length - 1 ? " " : ""}
+                    {i < words.length - 1 ? " " : ""}
                   </Fragment>
                 ))}
               </motion.p>

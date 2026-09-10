@@ -240,7 +240,7 @@ export function PeopleMoment() {
               className="relative z-10 mt-auto w-fit max-w-[320px] rounded-[4px] border border-edge bg-surface px-5 py-4 opacity-0 shadow-[0_10px_40px_rgba(0,0,0,0.08)] sm:mb-8"
             >
               <p className="text-[13.5px] leading-snug">
-                <span className="font-semibold">Mert Doğan</span> connects you to{" "}
+                <span className="font-semibold">Jonas Vogt</span> connects you to{" "}
                 <span className="font-semibold text-signal">Elif Kaya</span> on the
                 platform team.
               </p>
@@ -250,7 +250,7 @@ export function PeopleMoment() {
           {reducedMotion && (
             <p className="mt-8 max-w-[46ch] text-[15px] leading-relaxed text-muted">
               Eleven people work on the platform team at Northwind Robotics.
-              Mert Doğan, a connection of yours, works alongside Elif Kaya —
+              Jonas Vogt, a connection of yours, works alongside Elif Kaya —
               the person NOD found for this role.
             </p>
           )}

@@ -32,8 +32,8 @@ export const jobDetails: JobDetail[] = [
     skills: ["Node.js", "PostgreSQL", "TypeScript", "Kafka", "Docker"],
     connection: {
       id: "c2",
-      firstName: "Deniz",
-      lastName: "Yıldız",
+      firstName: "Mariana",
+      lastName: "Costa",
       position: "Engineering Manager",
       connectedAt: "2023-06-02",
     },
@@ -58,8 +58,8 @@ export const jobDetails: JobDetail[] = [
     skills: ["Go", "Python", "Kubernetes", "Terraform", "AWS"],
     connection: {
       id: "c3",
-      firstName: "Zeynep",
-      lastName: "Arslan",
+      firstName: "Wei Ling",
+      lastName: "Tan",
       position: "Senior SRE",
       connectedAt: "2022-11-20",
     },

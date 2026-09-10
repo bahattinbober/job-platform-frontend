@@ -143,7 +143,7 @@ export function generateGraph(): GraphData {
       const isBridgeSlot = ci === 0 && p === 1;
       nodes.push({
         id,
-        name: isDestinationSlot ? "Elif Kaya" : isBridgeSlot ? "Mert Doğan" : nameFor(),
+        name: isDestinationSlot ? "Elif Kaya" : isBridgeSlot ? "Jonas Vogt" : nameFor(),
         role: isDestinationSlot
           ? "Staff Engineer, Platform"
           : isBridgeSlot
