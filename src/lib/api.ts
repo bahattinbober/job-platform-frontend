@@ -237,7 +237,7 @@ export async function getJobDetail(jobId: string, score = 0): Promise<JobDetail>
   return {
     ...job,
     score,
-    connection: network.connections[0] ?? null,
+    connections: network.connections,
   };
 }
 
@@ -303,7 +303,7 @@ export async function getRoleMatches(resumeId: string): Promise<RoleMatch[]> {
         location: match.location,
         remoteType: job.remoteType,
         score: match.score,
-        connection: network.connections[0] ?? null,
+        connections: network.connections,
       };
     })
   );

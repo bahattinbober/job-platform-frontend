@@ -4,7 +4,7 @@ import { Reveal } from "@/components/nod/Reveal";
 import { roles } from "@/lib/mock";
 
 export function MatchesMoment() {
-  const withPath = roles.filter((r) => r.connection).length;
+  const withPath = roles.filter((r) => r.connections.length > 0).length;
 
   return (
     <section className="mx-auto w-full max-w-[860px] px-5 pb-24 pt-28 sm:px-8 sm:pt-32">

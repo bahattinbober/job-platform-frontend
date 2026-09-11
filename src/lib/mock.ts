@@ -33,13 +33,15 @@ export const jobDetails: JobDetail[] = [
     remoteType: "Hybrid",
     score: 0.91,
     skills: ["Node.js", "PostgreSQL", "Redis", "BullMQ", "Kubernetes", "AWS"],
-    connection: {
-      id: "c1",
-      firstName: "Elif",
-      lastName: "Kaya",
-      position: "Staff Engineer, Platform",
-      connectedAt: "2024-03-11",
-    },
+    connections: [
+      {
+        id: "c1",
+        firstName: "Elif",
+        lastName: "Kaya",
+        position: "Staff Engineer, Platform",
+        connectedAt: "2024-03-11",
+      },
+    ],
   },
   {
     id: "2",
@@ -49,13 +51,15 @@ export const jobDetails: JobDetail[] = [
     remoteType: "Remote",
     score: 0.87,
     skills: ["Node.js", "PostgreSQL", "TypeScript", "Kafka", "Docker"],
-    connection: {
-      id: "c2",
-      firstName: "Mariana",
-      lastName: "Costa",
-      position: "Engineering Manager",
-      connectedAt: "2023-06-02",
-    },
+    connections: [
+      {
+        id: "c2",
+        firstName: "Mariana",
+        lastName: "Costa",
+        position: "Engineering Manager",
+        connectedAt: "2023-06-02",
+      },
+    ],
   },
   {
     id: "3",
@@ -65,7 +69,7 @@ export const jobDetails: JobDetail[] = [
     remoteType: "On-site",
     score: 0.84,
     skills: ["Node.js", "TypeScript", "MongoDB", "GraphQL"],
-    connection: null,
+    connections: [],
   },
   {
     id: "4",
@@ -75,13 +79,15 @@ export const jobDetails: JobDetail[] = [
     remoteType: "Remote",
     score: 0.79,
     skills: ["Go", "Python", "Kubernetes", "Terraform", "AWS"],
-    connection: {
-      id: "c3",
-      firstName: "Wei Ling",
-      lastName: "Tan",
-      position: "Senior SRE",
-      connectedAt: "2022-11-20",
-    },
+    connections: [
+      {
+        id: "c3",
+        firstName: "Wei Ling",
+        lastName: "Tan",
+        position: "Senior SRE",
+        connectedAt: "2022-11-20",
+      },
+    ],
   },
   {
     id: "5",
@@ -91,7 +97,7 @@ export const jobDetails: JobDetail[] = [
     remoteType: "Hybrid",
     score: 0.76,
     skills: ["Python", "SQL", "Airflow", "Spark"],
-    connection: null,
+    connections: [],
   },
 ];
 

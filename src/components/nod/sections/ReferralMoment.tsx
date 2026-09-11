@@ -3,7 +3,7 @@ import { Reveal } from "@/components/nod/Reveal";
 import { jobDetails, resumeSkills } from "@/lib/mock";
 
 const role = jobDetails[0];
-const connection = role.connection!;
+const connection = role.connections[0]!;
 const matchedSkills = role.skills.filter((skill) => resumeSkills.includes(skill));
 
 export function ReferralMoment() {

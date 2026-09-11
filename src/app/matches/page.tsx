@@ -89,7 +89,7 @@ function MatchesBody() {
 
       {screen.step === "ready" && (() => {
         const { roles } = screen;
-        const withPath = roles.filter((r) => r.connection).length;
+        const withPath = roles.filter((r) => r.connections.length > 0).length;
         return (
           <>
             <section className="pb-11 pt-14">

@@ -30,7 +30,8 @@ const nodeVariantsPlain: Variants = {
 };
 
 export function RoleRow({ role }: { role: RoleMatch }): ReactElement {
-  const path = role.connection;
+  const primary = role.connections[0] ?? null;
+  const moreCount = role.connections.length - 1;
   const meta = [role.company, role.location, role.remoteType].filter(Boolean);
 
   return (
@@ -41,9 +42,9 @@ export function RoleRow({ role }: { role: RoleMatch }): ReactElement {
       {/* Node on the rail. Filled means there is a way in. */}
       <motion.span
         aria-hidden
-        variants={path ? nodeVariantsConnected : nodeVariantsPlain}
+        variants={primary ? nodeVariantsConnected : nodeVariantsPlain}
         className={`absolute left-[-33px] top-[25px] h-[9px] w-[9px] rounded-full border ${
-          path
+          primary
             ? "border-signal bg-signal shadow-[0_0_0_4px_var(--paper),0_0_0_5px_rgb(31_92_76/0.22)]"
             : "border-edge bg-paper"
         }`}
@@ -53,7 +54,7 @@ export function RoleRow({ role }: { role: RoleMatch }): ReactElement {
       <span
         aria-hidden
         className={`absolute left-[-24px] top-[29px] h-px w-[18px] ${
-          path ? "bg-signal/40" : "bg-edge"
+          primary ? "bg-signal/40" : "bg-edge"
         }`}
       />
 
@@ -79,17 +80,22 @@ export function RoleRow({ role }: { role: RoleMatch }): ReactElement {
         <Meter score={role.score} />
       </div>
 
-      {path ? (
+      {primary ? (
         <div className="mt-3 flex items-center gap-3.5 rounded-[3px] border border-edge border-l-2 border-l-signal bg-surface px-[15px] py-[11px]">
           <div className="min-w-0 flex-1">
             <p className="mb-px text-sm font-semibold">
-              {path.firstName} {path.lastName}
+              {primary.firstName} {primary.lastName}
+              {moreCount > 0 && (
+                <span className="ml-1.5 font-mono text-[10.5px] font-normal text-muted">
+                  +{moreCount} more
+                </span>
+              )}
             </p>
-            <p className="truncate text-[12.5px] text-muted">{path.position}</p>
+            <p className="truncate text-[12.5px] text-muted">{primary.position}</p>
           </div>
-          {formatSince(path.connectedAt) && (
+          {formatSince(primary.connectedAt) && (
             <span className="whitespace-nowrap font-mono text-[10.5px] tracking-[0.02em] text-muted">
-              SINCE {formatSince(path.connectedAt)}
+              SINCE {formatSince(primary.connectedAt)}
             </span>
           )}
         </div>

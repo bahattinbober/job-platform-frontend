@@ -16,7 +16,7 @@ export type RoleMatch = {
   remoteType: string | null;
   /** Cosine distance turned into a 0–1 similarity. Lower distance, higher score. */
   score: number;
-  connection: Connection | null;
+  connections: Connection[];
 };
 
 // Mirrors /jobs/:id: a RoleMatch plus the required skills, so the detail

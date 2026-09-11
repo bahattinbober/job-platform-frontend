@@ -25,11 +25,13 @@ type Screen =
 
 function RoleDetailBody({ id }: { id: string }) {
   const [screen, setScreen] = useState<Screen>({ step: "loading" });
+  const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setScreen({ step: "loading" });
+      setSelectedConnectionId(null);
       try {
         const resume = await getActiveResume();
         const matches = resume ? await getMatchingJobs(resume.id) : [];
@@ -38,7 +40,10 @@ function RoleDetailBody({ id }: { id: string }) {
           s.toLowerCase()
         );
         const job = await getJobDetail(id, score);
-        if (!cancelled) setScreen({ step: "ready", job, resumeSkills });
+        if (!cancelled) {
+          setScreen({ step: "ready", job, resumeSkills });
+          setSelectedConnectionId(job.connections[0]?.id ?? null);
+        }
       } catch (err) {
         if (cancelled) return;
         if (err instanceof ApiError && err.status === 404) {
@@ -98,6 +103,9 @@ function RoleDetailBody({ id }: { id: string }) {
   const { job, resumeSkills } = screen;
   const meta = [job.company, job.location, job.remoteType].filter(Boolean);
   const matchedSkills = job.skills.filter((skill) => resumeSkills.includes(skill.toLowerCase()));
+  const selectedConnection =
+    job.connections.find((c) => c.id === selectedConnectionId) ?? job.connections[0] ?? null;
+  const multipleConnections = job.connections.length > 1;
 
   return (
     <main className="mx-auto w-full max-w-[760px] px-6 pb-24">
@@ -153,37 +161,55 @@ function RoleDetailBody({ id }: { id: string }) {
 
         <section className="py-6">
           <h2 className="mb-4 text-sm font-semibold">Network</h2>
-          {job.connection ? (
-            <div className="flex items-center gap-3.5 rounded-[3px] border border-edge border-l-2 border-l-signal bg-surface px-[15px] py-[11px] max-[560px]:flex-wrap">
-              <div className="min-w-0 flex-1">
-                <p className="mb-px text-sm font-semibold">
-                  {job.connection.firstName} {job.connection.lastName}
-                </p>
-                <p className="truncate text-[12.5px] text-muted">{job.connection.position}</p>
-              </div>
-              {formatSince(job.connection.connectedAt) && (
-                <span className="whitespace-nowrap font-mono text-[10.5px] tracking-[0.02em] text-muted">
-                  SINCE {formatSince(job.connection.connectedAt)}
-                </span>
-              )}
-            </div>
-          ) : (
+          {job.connections.length === 0 ? (
             <p className="text-[13px] text-muted">No one from your network works here.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {job.connections.map((connection) => {
+                const isSelected = connection.id === selectedConnection?.id;
+                return (
+                  <button
+                    key={connection.id}
+                    type="button"
+                    aria-pressed={multipleConnections ? isSelected : undefined}
+                    onClick={() => setSelectedConnectionId(connection.id)}
+                    className={`flex w-full cursor-pointer items-center gap-3.5 rounded-[3px] border bg-surface px-[15px] py-[11px] text-left transition-colors max-[560px]:flex-wrap focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${
+                      !multipleConnections || isSelected
+                        ? "border-edge border-l-2 border-l-signal"
+                        : "border-edge border-l-2 border-l-transparent hover:border-l-signal/40"
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="mb-px text-sm font-semibold">
+                        {connection.firstName} {connection.lastName}
+                      </p>
+                      <p className="truncate text-[12.5px] text-muted">{connection.position}</p>
+                    </div>
+                    {formatSince(connection.connectedAt) && (
+                      <span className="whitespace-nowrap font-mono text-[10.5px] tracking-[0.02em] text-muted">
+                        SINCE {formatSince(connection.connectedAt)}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           )}
         </section>
 
-        {job.connection && (
+        {selectedConnection && (
           <section className="py-6">
             <h2 className="mb-4 text-sm font-semibold">Referral message</h2>
             <ReferralPanel
+              key={selectedConnection.id}
               source="live"
               jobId={job.id}
-              connectionId={job.connection.id}
+              connectionId={selectedConnection.id}
               jobTitle={job.title}
               company={job.company}
-              connectionFirstName={job.connection.firstName}
-              connectionPosition={job.connection.position}
-              connectedAt={job.connection.connectedAt}
+              connectionFirstName={selectedConnection.firstName}
+              connectionPosition={selectedConnection.position}
+              connectedAt={selectedConnection.connectedAt}
               matchedSkills={matchedSkills}
             />
           </section>
